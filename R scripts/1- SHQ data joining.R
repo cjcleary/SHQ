@@ -46,63 +46,31 @@ full_dat_average <- reduce(list(descrips_dat,
                                 mvic_dat_mean,
                                 sl_drop_mean),
                            full_join, by = "ID")
+
+full_dat_average
+
 full_dat_average %>% 
   write.csv('../Data Collection/SHQ_AverageSLandMVICData_2026-04-20.csv',
             row.names = F, na = "")
 
 
-full_dat_average
+full_dat_dom <- full_dat_average %>% pivot_longer(cols = starts_with(c("Left", "Right")),
+                                  names_to = c("Tested_Leg", "Action"),
+                                  names_sep = 5) %>% 
+  mutate(Action = str_replace_all(Action, "_K", "K" ),
+         Tested_Leg = str_remove(Tested_Leg, "_"),
+         Leg = ifelse(Dom == Tested_Leg, "Dom", "NDom"),
+         .before = Action) %>% 
+  select(1:7, 12:14) %>% 
+  pivot_wider(names_from = c("Leg", "Action"),
+              names_glue = c("{Leg}_{Action}"))  %>% 
+  mutate(Dom_HQ = Dom_KF/Dom_KE,
+         NDom_HQ = NDom_KF/NDom_KE)
+  
+full_dat_dom %>% 
+  write.csv('../Data Collection/SHQ_AverageSLandMVICData_2026-04-21.csv',
+            row.names = F, na = "")
+full_dat_dom  
 
-hq_dat <- full_dat_average %>% 
-  select(ID, Sex, Dom, contains(c("KE", "KF"))) %>% 
-  pivot_longer(cols = 4:7,
-               names_to = c("Tested_Leg", "Action"),
-               names_sep = "_",
-               values_to = "MVIC") %>% 
-  mutate(Leg = ifelse(Dom == Tested_Leg, "D", "ND"),
-         .before = MVIC) %>% 
-  pivot_wider(names_from = Action,
-              values_from = MVIC) %>% 
-  select(ID, Sex, Leg, KE:KF) %>% 
-  mutate(HQ = KF/KE)
-hq_dat
 
-library(rstatix)
-library(afex)
-hq_sex_model <- aov_4(KE ~ Sex * (Leg | ID),
-                      data = hq_dat,
-                      anova_table = list(correction = 'none',
-                                         es = 'pes'))
-hq_sex_model
 
-sl_contacts <- full_dat_average %>% 
-  select(ID, Sex, Dom, contains("Flexion")) %>% 
-  pivot_longer(cols = 4:7,
-               names_to = c("Tested_Leg", "FL", "Timepoint", "deg"),
-               values_to = "Degrees", 
-               names_sep = "_") %>% 
-  mutate(Leg = ifelse(Dom == Tested_Leg, "D", "ND")) %>% 
-  select(ID, Sex, Leg, Timepoint, Degrees) %>% 
-  pivot_wider(names_from = Timepoint,
-              values_from = Degrees)
-hq_dat
-
-hq_sl_contacts <- left_join(hq_dat, sl_contacts)
-hq_sl_contacts
-
-dom_contact_model <- lm(Contact ~ Sex * HQ, data = hq_sl_contacts %>% 
-                          filter(Leg == "D"))
-summary(dom_contact_model)
-
-nd_contact_model <- lm(Contact ~ Sex * HQ, data = hq_sl_contacts %>% 
-                         filter(Leg == "ND"))
-
-summary(nd_contact_model)
-
-dom_peak_model <- lm(Peak ~ Sex * HQ, data = hq_sl_contacts %>% 
-                       filter(Leg == "D"))
-summary(dom_peak_model)
-
-nd_contact_model <- lm(Peak ~ Sex * HQ, data = hq_sl_contacts %>% 
-                       filter(Leg == "ND"))
-nd_contact_model %>% summary()

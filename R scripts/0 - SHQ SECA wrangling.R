@@ -1,6 +1,6 @@
 library(tidyverse)
 
-full_seca <- read_csv('Data Collection/SECA_Export_Full04162026.csv')
+full_seca <- read_csv('../Data Collection/SECA_Export_Full04162026.csv')
 
 glimpse(full_seca)
 
